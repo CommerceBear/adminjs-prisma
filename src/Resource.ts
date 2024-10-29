@@ -6,10 +6,12 @@ import { PrismaClient } from '@prisma/client';
 import { DMMF } from '@prisma/client/runtime/library.js';
 
 import { Property } from './Property.js';
-import { lowerCase } from './utils/helpers.js';
+import { base64EncodeCompositeKey, lowerCase } from './utils/helpers.js';
 import { ModelManager, Enums } from './types.js';
 import { convertFilter, convertParam } from './utils/converters.js';
 import { getEnums } from './utils/get-enums.js';
+
+const ADMINJS_COMPOSITE_ID_PROPERTY = 'adminJSCompositeId';
 
 export class Resource extends BaseResource {
   protected client: PrismaClient;
@@ -96,7 +98,9 @@ export class Resource extends BaseResource {
     );
   }
 
-  protected buildSortBy(sort: { sortBy?: string; direction?: 'asc' | 'desc' } = {}) {
+  protected buildSortBy(
+    sort: { sortBy?: string; direction?: 'asc' | 'desc' } = {},
+  ) {
     let { sortBy: path } = sort;
     const { direction = 'desc' } = sort;
 
@@ -104,11 +108,20 @@ export class Resource extends BaseResource {
 
     const [basePath, sortBy] = path.split('.');
     const sortByProperty = this.property(basePath);
+    if (sortByProperty?.name() === ADMINJS_COMPOSITE_ID_PROPERTY) {
+      return {
+        [this.model.primaryKey!.fields[0]]: direction,
+      };
+      // return this.model.primaryKey!.fields.reduceRight(
+      //   (reduced, field) => ({ [field.name]: reduced } as any),
+      //   direction,
+      // );
+    }
 
     if (
-      sortByProperty?.column.relationName
-      && sortByProperty?.column.kind === 'object'
-      && sortByProperty.column.relationToFields?.length
+      sortByProperty?.column.relationName &&
+      sortByProperty?.column.kind === 'object' &&
+      sortByProperty.column.relationToFields?.length
     ) {
       return {
         [basePath]: {
@@ -202,9 +215,9 @@ export class Resource extends BaseResource {
     const { model, client } = args;
 
     return (
-      !!model?.name
-      && !!model?.fields.length
-      && !!client?.[lowerCase(model.name)]
+      !!model?.name &&
+      !!model?.fields.length &&
+      !!client?.[lowerCase(model.name)]
     );
   }
 
@@ -213,8 +226,8 @@ export class Resource extends BaseResource {
 
     const properties = fields.reduce((memo, field) => {
       if (
-        field.isReadOnly
-        || (field.relationName && !field.relationFromFields?.length)
+        field.isReadOnly ||
+        (field.relationName && !field.relationFromFields?.length)
       ) {
         return memo;
       }
@@ -229,6 +242,27 @@ export class Resource extends BaseResource {
       return memo;
     }, {});
 
+    const { primaryKey } = this.model;
+    if (primaryKey?.fields.length ?? 0 > 1) {
+      const idProperty = new Property(
+        {
+          name: ADMINJS_COMPOSITE_ID_PROPERTY,
+          kind: 'scalar',
+          isRequired: true,
+          isList: false,
+          isUnique: true,
+          isId: true,
+          type: 'String',
+          hasDefaultValue: true,
+          isGenerated: true,
+          isReadOnly: true,
+        },
+        Object.keys(properties).length,
+        this.enums,
+      );
+      properties[idProperty.path()] = idProperty;
+    }
+
     return properties;
   }
 
@@ -236,6 +270,21 @@ export class Resource extends BaseResource {
     const preparedParams: Record<string, any> = {};
 
     for (const property of this.properties()) {
+      if (property === this.idProperty) {
+        const primaryKeyValue = this.model.primaryKey!.fields.reduce(
+          (pk, field) => {
+            pk[field] = flat.get(params, field);
+            return pk;
+          },
+          {},
+        );
+        const encodedPrimaryKey = base64EncodeCompositeKey(primaryKeyValue);
+        preparedParams[property.path()] = encodedPrimaryKey;
+
+        // eslint-disable-next-line no-continue
+        continue;
+      }
+
       const param = flat.get(params, property.path());
       const key = property.path();
 
@@ -288,6 +337,19 @@ export class Resource extends BaseResource {
       if (!foreignColumnName) continue;
 
       preparedValues[key] = params[foreignColumnName];
+    }
+
+    if (this.model.primaryKey?.fields.length ?? 0 > 1) {
+      const primaryKeyValue = this.model.primaryKey!.fields.reduce(
+        (pk, field) => {
+          pk[field] = flat.get(params, field);
+          return pk;
+        },
+        {},
+      );
+
+      preparedValues[this.idProperty.path()] =
+        base64EncodeCompositeKey(primaryKeyValue);
     }
 
     return preparedValues;
