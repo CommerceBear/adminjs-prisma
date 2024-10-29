@@ -21,7 +21,11 @@ export class Property extends BaseProperty {
   }
 
   public isEditable(): boolean {
-    return !this.isId() && this.column.name !== 'createdAt' && this.column.name !== 'updatedAt';
+    return (
+      !this.isId() &&
+      this.column.name !== 'createdAt' &&
+      this.column.name !== 'updatedAt'
+    );
   }
 
   public isId(): boolean {
@@ -83,11 +87,17 @@ export class Property extends BaseProperty {
   public type(): PropertyType {
     let type: PropertyType = DATA_TYPES[this.column.type];
 
-    if (this.reference()) { type = 'reference'; }
-    if (this.isEnum()) { type = 'string'; }
+    if (this.reference()) {
+      type = 'reference';
+    }
+    if (this.isEnum()) {
+      type = 'string';
+    }
 
     // eslint-disable-next-line no-console
-    if (!type) { console.warn(`Unhandled type: ${this.column.type}`); }
+    if (!type) {
+      console.warn(`Unhandled type: ${this.column.type}`);
+    }
 
     return type;
   }

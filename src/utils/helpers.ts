@@ -6,25 +6,26 @@
  * @param name    string value
  * @returns       `name` with it's first character converted to lowercase
  */
-export const lowerCase = (name: string): string => name.substring(0, 1).toLowerCase() + name.substring(1);
+export const lowerCase = (name: string): string =>
+  name.substring(0, 1).toLowerCase() + name.substring(1);
 /* eslint-enable max-len */
 
 export const isNumeric = (
   value: null | string | number | boolean | Record<string, any> | undefined,
 ): boolean => {
-  const stringValue = (String(value)).replace(/,/g, '.')
+  const stringValue = String(value).replace(/,/g, '.');
 
-  if (isNaN(parseFloat(stringValue))) return false
+  if (isNaN(parseFloat(stringValue))) return false;
 
-  return isFinite(Number(stringValue))
-}
+  return isFinite(Number(stringValue));
+};
 
 export const safeParseNumber = (
   value?: null | string | number | boolean | Record<string, any>,
 ): string | number | null | boolean | Record<string, any> | undefined => {
-  if (isNumeric(value)) return Number(value)
+  if (isNumeric(value)) return Number(value);
 
-  return value
+  return value;
 };
 
 export const safeParseJSON = (json: string): Record<string, any> | null => {
@@ -34,3 +35,9 @@ export const safeParseJSON = (json: string): Record<string, any> | null => {
     return null;
   }
 };
+
+export const base64EncodeCompositeKey = (key: Record<string, any>): string =>
+  Buffer.from(JSON.stringify(key), 'utf-8').toString('base64');
+
+export const base64DecodeCompositeKey = (value: string): Record<string, any> =>
+  JSON.parse(Buffer.from(value, 'base64').toString('utf-8'));

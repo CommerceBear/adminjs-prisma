@@ -158,6 +158,6 @@ dist
 
 types
 build
-lib
+# lib
 .adminjs
 /spec/prisma/migrations
