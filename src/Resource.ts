@@ -10,9 +10,10 @@ import { base64EncodeCompositeKey, lowerCase } from './utils/helpers.js';
 import { ModelManager, Enums } from './types.js';
 import { convertFilter, convertParam } from './utils/converters.js';
 import { getEnums } from './utils/get-enums.js';
-import { CompisiteIdProperty } from './CompositeIdProperty.js';
-
-const ADMINJS_COMPOSITE_ID_PROPERTY = 'adminJSCompositeId';
+import {
+  ADMINJS_COMPOSITE_ID_PROPERTY,
+  CompisiteIdProperty,
+} from './CompositeIdProperty.js';
 
 export class Resource extends BaseResource {
   protected client: PrismaClient;
