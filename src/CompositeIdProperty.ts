@@ -1,8 +1,6 @@
 import { BaseProperty, PropertyType } from 'adminjs';
 import { DMMF } from '@prisma/client/runtime/library.js';
 
-export const ADMINJS_COMPOSITE_ID_PROPERTY = 'adminJSCompositeId';
-
 export class CompisiteIdProperty extends BaseProperty {
   public columns: DMMF.Field[];
 
@@ -22,10 +20,6 @@ export class CompisiteIdProperty extends BaseProperty {
 
   public isId(): boolean {
     return true;
-  }
-
-  public name(): string {
-    return ADMINJS_COMPOSITE_ID_PROPERTY;
   }
 
   public isRequired(): boolean {

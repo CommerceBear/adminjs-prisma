@@ -8,7 +8,7 @@ import {
   safeParseJSON,
   safeParseNumber,
 } from './helpers.js';
-import { ADMINJS_COMPOSITE_ID_PROPERTY } from 'src/CompositeIdProperty.js';
+import { CompisiteIdProperty } from '../CompositeIdProperty.js';
 
 export const convertParam = (
   property: Property,
@@ -17,7 +17,7 @@ export const convertParam = (
 ): string | boolean | number | Record<string, any> | null | undefined => {
   const type = property.type();
 
-  if (property.name() === ADMINJS_COMPOSITE_ID_PROPERTY) {
+  if (property instanceof CompisiteIdProperty) {
     return base64DecodeCompositeKey(value as string);
   }
 
@@ -48,10 +48,10 @@ export const convertFilter = (
   if (!filterObject) return {};
 
   const uuidRegex =
-    /^[0-9A-F]{8}-[0-9A-F]{4}-[5|4|3|2|1][0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}$/i;
+    /^[0-9A-F]{8}-[0-9A-F]{4}-[7|5|4|3|2|1][0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}$/i;
   const { filters = {} } = filterObject;
   return Object.entries(filters).reduce((where, [name, filter]) => {
-    if (name === 'adminJsCompositeId') {
+    if (filter.property instanceof CompisiteIdProperty) {
       if (typeof filter.value !== 'string') {
         throw new Error('AdminJsCompositeId must be a string');
       }

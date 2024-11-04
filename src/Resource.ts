@@ -10,10 +10,7 @@ import { base64EncodeCompositeKey, lowerCase } from './utils/helpers.js';
 import { ModelManager, Enums } from './types.js';
 import { convertFilter, convertParam } from './utils/converters.js';
 import { getEnums } from './utils/get-enums.js';
-import {
-  ADMINJS_COMPOSITE_ID_PROPERTY,
-  CompisiteIdProperty,
-} from './CompositeIdProperty.js';
+import { CompisiteIdProperty } from './CompositeIdProperty.js';
 
 export class Resource extends BaseResource {
   protected client: PrismaClient;
@@ -110,14 +107,10 @@ export class Resource extends BaseResource {
 
     const [basePath, sortBy] = path.split('.');
     const sortByProperty = this.property(basePath);
-    if (sortByProperty?.name() === ADMINJS_COMPOSITE_ID_PROPERTY) {
+    if (sortByProperty instanceof CompisiteIdProperty) {
       return {
-        [this.model.primaryKey!.fields[0]]: direction,
+        [sortByProperty.columns[0].name]: direction,
       };
-      // return this.model.primaryKey!.fields.reduceRight(
-      //   (reduced, field) => ({ [field.name]: reduced } as any),
-      //   direction,
-      // );
     }
 
     if (
@@ -227,10 +220,7 @@ export class Resource extends BaseResource {
     const { fields = [] } = this.model;
 
     const properties = fields.reduce((memo, field) => {
-      if (
-        field.isReadOnly ||
-        (field.relationName && !field.relationFromFields?.length)
-      ) {
+      if (field.relationName && !field.relationFromFields?.length) {
         return memo;
       }
 
@@ -260,14 +250,11 @@ export class Resource extends BaseResource {
     const preparedParams: Record<string, any> = {};
 
     for (const property of this.properties()) {
-      if (property === this.idProperty) {
-        const primaryKeyValue = this.model.primaryKey!.fields.reduce(
-          (pk, field) => {
-            pk[field] = flat.get(params, field);
-            return pk;
-          },
-          {},
-        );
+      if (property instanceof CompisiteIdProperty) {
+        const primaryKeyValue = property.columns.reduce((pk, field) => {
+          pk[field.path()] = flat.get(params, field.path());
+          return pk;
+        }, {});
         const encodedPrimaryKey = base64EncodeCompositeKey(primaryKeyValue);
         preparedParams[property.path()] = encodedPrimaryKey;
 
@@ -329,8 +316,8 @@ export class Resource extends BaseResource {
       preparedValues[key] = params[foreignColumnName];
     }
 
-    if (this.model.primaryKey?.fields.length ?? 0 > 1) {
-      const primaryKeyValue = this.model.primaryKey!.fields.reduce(
+    if (this.model.primaryKey && this.model.primaryKey.fields.length > 1) {
+      const primaryKeyValue = this.model.primaryKey.fields.reduce(
         (pk, field) => {
           pk[field] = flat.get(params, field);
           return pk;
