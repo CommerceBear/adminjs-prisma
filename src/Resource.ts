@@ -167,6 +167,9 @@ export class Resource extends BaseResource {
     params: Record<string, any>,
   ): Promise<Record<string, any>> {
     const preparedParams = this.prepareParams(params);
+    if (this.idProperty instanceof CompisiteIdProperty) {
+      delete preparedParams[this.idProperty.path()];
+    }
 
     const result = await this.manager.create({ data: preparedParams });
 
@@ -251,8 +254,15 @@ export class Resource extends BaseResource {
 
     for (const property of this.properties()) {
       if (property instanceof CompisiteIdProperty) {
-        const primaryKeyValue = property.columns.reduce((pk, field) => {
-          pk[field.path()] = flat.get(params, field.path());
+        const primaryKeyValue = property.columns.reduce((pk, column) => {
+          const componentProp = this.properties().find(
+            (p) => p.name() === column.name,
+          );
+          if (!componentProp) {
+            throw new Error(`CompositeId property ${column.name} not found`);
+          }
+
+          pk[componentProp.path()] = flat.get(params, componentProp.path());
           return pk;
         }, {});
         const encodedPrimaryKey = base64EncodeCompositeKey(primaryKeyValue);
